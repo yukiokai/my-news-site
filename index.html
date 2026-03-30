@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="国内外の最新ニュースを自動収集した1ページ完結のニュースサイトです。国内外、IT、経済のニュースをまとめてチェックできます。">
+    <title>Daily Digest - 1Page News</title>
+    <!-- Modern Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-grad-start: #0f172a;
+            --bg-grad-end: #1e1b4b;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent-hover: #0ea5e9;
+        }
+
+        body {
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, var(--bg-grad-start), var(--bg-grad-end));
+            background-attachment: fixed;
+            color: var(--text-main);
+            min-height: 100vh;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            box-sizing: border-box;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 4rem 0 3rem;
+            border-bottom: 1px solid var(--card-border);
+            position: relative;
+            animation: fadeInDown 0.8s ease-out forwards;
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin: 0;
+            background: linear-gradient(to right, #38bdf8, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -1.5px;
+            text-shadow: 0 10px 30px rgba(56, 189, 248, 0.2);
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1.2rem;
+            margin-top: 0.8rem;
+            font-weight: 500;
+        }
+
+        .timestamp-badge {
+            font-size: 0.9rem;
+            color: var(--accent);
+            margin-top: 1.5rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1.2rem;
+            background: rgba(56, 189, 248, 0.1);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 999px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .timestamp-badge:hover {
+            box-shadow: 0 4px 20px rgba(56, 189, 248, 0.3);
+            background: rgba(56, 189, 248, 0.15);
+        }
+
+        .category-section {
+            margin-bottom: 5rem;
+            animation: fadeIn 0.8s ease-out forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        /* Staggered animation delays for categories */
+        .category-section:nth-child(2) { animation-delay: 0.2s; }
+        .category-section:nth-child(3) { animation-delay: 0.3s; }
+        .category-section:nth-child(4) { animation-delay: 0.4s; }
+        .category-section:nth-child(5) { animation-delay: 0.5s; }
+
+        @keyframes fadeIn {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .category-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            color: #f1f5f9;
+        }
+
+        .category-title::before {
+            content: '';
+            display: block;
+            width: 6px;
+            height: 32px;
+            background: linear-gradient(to bottom, #38bdf8, #818cf8);
+            border-radius: 3px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 1.8rem;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            flex-direction: column;
+            text-decoration: none;
+            color: inherit;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 100%);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
+            border-color: rgba(56, 189, 248, 0.4);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .card:hover::before {
+            opacity: 1;
+        }
+
+        .card-title {
+            font-size: 1.15rem;
+            font-weight: 600;
+            margin: 0 0 1.5rem 0;
+            line-height: 1.5;
+            position: relative;
+            z-index: 1;
+        }
+
+        .card-footer {
+            margin-top: auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            position: relative;
+            z-index: 1;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .source-tag {
+            font-weight: 600;
+            color: #e2e8f0;
+            background: rgba(255,255,255,0.1);
+            padding: 4px 10px;
+            border-radius: 6px;
+        }
+
+        .date {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.8rem;
+        }
+
+        footer {
+            text-align: center;
+            padding: 3rem 0;
+            margin-top: 4rem;
+            border-top: 1px solid var(--card-border);
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .container { padding: 1.5rem; }
+            h1 { font-size: 2.5rem; }
+            .category-title { font-size: 1.6rem; }
+            .grid { grid-template-columns: 1fr; }
+            .card { padding: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>News Digest</h1>
+            <div class="subtitle">国内外の最新ニュースを自動収集</div>
+            <div class="timestamp-badge">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                最終更新: 2026-03-30 21:22:05
+            </div>
+        </header>
+
+        
+        
+        <section class="category-section">
+            <h2 class="category-title">📰 国内ニュース</h2>
+            <div class="grid">
+                
+                <a href="https://news.web.nhk/newsweb/na/na-k10015087961000" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">取り調べで「反社だ」告訴の当時東京地検特捜部検事が不起訴に</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">NHK社会</span>
+                        <span class="date">Mon, 30 Mar 2026 20:55</span>
+                    </div>
+                </a>
+                
+                <a href="https://news.web.nhk/newsweb/na/na-k10015087941000" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">辺野古沖転覆事故 学校法人が第三者の特別調査委を設置</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">NHK社会</span>
+                        <span class="date">Mon, 30 Mar 2026 20:18</span>
+                    </div>
+                </a>
+                
+                <a href="https://news.yahoo.co.jp/pickup/6574687?source=rss" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">11年ぶりに成立 暫定予算とは</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">Yahoo!国内</span>
+                        <span class="date">Mon, 30 Mar 2026 10:52</span>
+                    </div>
+                </a>
+                
+                <a href="https://news.web.nhk/newsweb/na/na-k10015087911000" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">センバツ ネットでの中傷の投稿 約350件 高野連などが削除要請</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">NHK社会</span>
+                        <span class="date">Mon, 30 Mar 2026 19:47</span>
+                    </div>
+                </a>
+                
+                <a href="https://news.web.nhk/newsweb/na/na-k10015087181000" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">【動画】Pickup NEWS（3月30日）</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">NHK社会</span>
+                        <span class="date">Mon, 30 Mar 2026 19:45</span>
+                    </div>
+                </a>
+                
+                <a href="https://news.web.nhk/newsweb/na/na-k10015087501000" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">北海道 福島町 人里へのヒグマ出没抑制「春期管理捕獲」始まる</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">NHK社会</span>
+                        <span class="date">Mon, 30 Mar 2026 19:33</span>
+                    </div>
+                </a>
+                
+                <a href="https://news.web.nhk/newsweb/na/na-k10015087711000" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">静岡 伊東市の田久保前市長を在宅起訴 卒業証書偽造などの罪で</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">NHK社会</span>
+                        <span class="date">Mon, 30 Mar 2026 19:32</span>
+                    </div>
+                </a>
+                
+                <a href="https://news.web.nhk/newsweb/na/na-k10015087211000" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">西日本中心に風雨強まり 荒れた天気となるおそれ</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">NHK社会</span>
+                        <span class="date">Mon, 30 Mar 2026 19:31</span>
+                    </div>
+                </a>
+                
+                <a href="https://news.web.nhk/newsweb/na/na-k10015087841000" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">27年前の女性殺害事件 遺族が被告に損害賠償求め提訴 名古屋</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">NHK社会</span>
+                        <span class="date">Mon, 30 Mar 2026 19:30</span>
+                    </div>
+                </a>
+                
+                <a href="https://news.yahoo.co.jp/pickup/6574678?source=rss" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">新年度予算 成立日程巡り攻防続く</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">Yahoo!国内</span>
+                        <span class="date">Mon, 30 Mar 2026 09:30</span>
+                    </div>
+                </a>
+                
+            </div>
+        </section>
+        
+        
+        
+        <section class="category-section">
+            <h2 class="category-title">🌍 国際ニュース</h2>
+            <div class="grid">
+                
+                <a href="https://news.web.nhk/newsweb/na/na-k10015087851000" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">ホルムズ海峡通過のインド船籍タンカー“インド海軍付き添い”</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">NHK国際</span>
+                        <span class="date">Mon, 30 Mar 2026 20:48</span>
+                    </div>
+                </a>
+                
+                <a href="https://news.web.nhk/newsweb/na/na-k10015087921000" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">米議員団 台湾総統に防衛力強化の特別予算を支持する考え示す</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">NHK国際</span>
+                        <span class="date">Mon, 30 Mar 2026 20:32</span>
+                    </div>
+                </a>
+                
+                <a href="https://news.web.nhk/newsweb/na/na-k10015087671000" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">医療用物資や部品の安定供給求める声 制服づくりに影響懸念も</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">NHK国際</span>
+                        <span class="date">Mon, 30 Mar 2026 20:14</span>
+                    </div>
+                </a>
+                
+                <a href="https://news.web.nhk/newsweb/na/na-k10015057211000" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">【随時更新】ロシア ウクライナに軍事侵攻（3月30日の動き）</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">NHK国際</span>
+                        <span class="date">Mon, 30 Mar 2026 20:10</span>
+                    </div>
+                </a>
+                
+                <a href="https://news.web.nhk/newsweb/na/na-k10015087901000" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">ウクライナ “ロシアの主要な石油輸出拠点を無人機で攻撃”</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">NHK国際</span>
+                        <span class="date">Mon, 30 Mar 2026 20:07</span>
+                    </div>
+                </a>
+                
+                <a href="https://news.web.nhk/newsweb/na/na-k10015087831000" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">ミャンマー軍司令官が退任 新政権で大統領就任の見通し</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">NHK国際</span>
+                        <span class="date">Mon, 30 Mar 2026 19:19</span>
+                    </div>
+                </a>
+                
+                <a href="https://news.web.nhk/newsweb/na/na-k10015087241000" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">イラン情勢 トランプ大統領 カーグ島を占領する可能性も示唆</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">NHK国際</span>
+                        <span class="date">Mon, 30 Mar 2026 18:57</span>
+                    </div>
+                </a>
+                
+                <a href="https://news.web.nhk/newsweb/na/na-k10015087531000" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">国連レバノン暫定軍が攻撃受け1人死亡 “戦争犯罪”と強く非難</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">NHK国際</span>
+                        <span class="date">Mon, 30 Mar 2026 15:31</span>
+                    </div>
+                </a>
+                
+                <a href="https://news.yahoo.co.jp/pickup/6574648?source=rss" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">中国が自民古屋氏に制裁 台湾巡り</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">Yahoo!国際</span>
+                        <span class="date">Mon, 30 Mar 2026 04:36</span>
+                    </div>
+                </a>
+                
+                <a href="https://news.yahoo.co.jp/pickup/6574636?source=rss" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">イラン戦争 米の若者が批判的な訳</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">Yahoo!国際</span>
+                        <span class="date">Mon, 30 Mar 2026 04:32</span>
+                    </div>
+                </a>
+                
+            </div>
+        </section>
+        
+        
+        
+        <section class="category-section">
+            <h2 class="category-title">💻 テクノロジー・IT</h2>
+            <div class="grid">
+                
+                <a href="https://www.itmedia.co.jp/news/articles/2603/30/news136.html" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">メモリ8GBの「MacBook Neo」は動画編集に対応できるのか？　3つのソフトで4K編集を試す</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">ITmedia</span>
+                        <span class="date">Mon, 30 Mar 2026 18:30</span>
+                    </div>
+                </a>
+                
+                <a href="https://www.itmedia.co.jp/news/articles/2603/30/news134.html" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">アスリートの輝き汚す視線　AI加工や拡散、より深刻化　「100％集中できなかった」</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">ITmedia</span>
+                        <span class="date">Mon, 30 Mar 2026 18:14</span>
+                    </div>
+                </a>
+                
+                <a href="https://www.itmedia.co.jp/news/articles/2603/30/news124.html" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">さいたまスーパーアリーナの愛称、「GMOアリーナさいたま」に　5.5億円×5年、「ITで進化」へ</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">ITmedia</span>
+                        <span class="date">Mon, 30 Mar 2026 16:26</span>
+                    </div>
+                </a>
+                
+                <a href="https://www.itmedia.co.jp/news/articles/2603/30/news119.html" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">ドコモの「iモード」31日で終了、27年の歴史に幕　かつて隆盛を誇った“世界初のモバイルインターネットサービス”</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">ITmedia</span>
+                        <span class="date">Mon, 30 Mar 2026 15:57</span>
+                    </div>
+                </a>
+                
+                <a href="https://www.itmedia.co.jp/news/articles/2603/30/news108.html" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">平成“Web2.0”ノリは、令和では嫌われる？　クックパッド「外部レシピ取り込み」炎上を考える</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">ITmedia</span>
+                        <span class="date">Mon, 30 Mar 2026 14:04</span>
+                    </div>
+                </a>
+                
+                <a href="https://www.itmedia.co.jp/news/articles/2603/30/news102.html" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">アメリカ式BBQの“ウマそうさ”、日米のXユーザーをつなぐ一大ムーブメントに　きっかけはとあるAI機能　マスク氏も感嘆</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">ITmedia</span>
+                        <span class="date">Mon, 30 Mar 2026 12:52</span>
+                    </div>
+                </a>
+                
+                <a href="https://www.itmedia.co.jp/news/articles/2603/30/news093.html" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">「新サービスは死に、"狂気"が生まれる」　ニコニコを創ったカワンゴ氏&ひろゆき氏に聞く、AI時代のサービス開発</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">ITmedia</span>
+                        <span class="date">Mon, 30 Mar 2026 12:00</span>
+                    </div>
+                </a>
+                
+                <a href="https://www.itmedia.co.jp/news/articles/2603/30/news084.html" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">5G・6G電波、部屋の隅々に行きわたらせる新技術　NTT、薄型液晶装置で電波方向制御</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">ITmedia</span>
+                        <span class="date">Mon, 30 Mar 2026 10:26</span>
+                    </div>
+                </a>
+                
+                <a href="https://news.yahoo.co.jp/pickup/6574587?source=rss" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">Z世代に広がる「スマホ疲れ」</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">Yahoo! IT</span>
+                        <span class="date">Sun, 29 Mar 2026 12:08</span>
+                    </div>
+                </a>
+                
+                <a href="https://news.yahoo.co.jp/pickup/6574523?source=rss" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">中国 2月の衆院選時も認知戦か</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">Yahoo! IT</span>
+                        <span class="date">Sat, 28 Mar 2026 23:13</span>
+                    </div>
+                </a>
+                
+            </div>
+        </section>
+        
+        
+        
+        <section class="category-section">
+            <h2 class="category-title">📈 経済・ビジネス</h2>
+            <div class="grid">
+                
+                <a href="https://news.yahoo.co.jp/pickup/6574691?source=rss" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">マツダ 中東湾岸諸国向け輸出停止</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">Yahoo!経済</span>
+                        <span class="date">Mon, 30 Mar 2026 11:43</span>
+                    </div>
+                </a>
+                
+                <a href="https://news.yahoo.co.jp/pickup/6574690?source=rss" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">さいたまスーパーアリーナ 新呼称</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">Yahoo!経済</span>
+                        <span class="date">Mon, 30 Mar 2026 11:25</span>
+                    </div>
+                </a>
+                
+                <a href="https://news.web.nhk/newsweb/na/na-k10015087671000" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">医療用物資や部品の安定供給求める声 制服づくりに影響懸念も</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">NHK経済</span>
+                        <span class="date">Mon, 30 Mar 2026 20:14</span>
+                    </div>
+                </a>
+                
+                <a href="https://news.web.nhk/newsweb/na/na-k10015087791000" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">円相場 一時1ドル＝160円台まで円安進むも小幅に値上がり</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">NHK経済</span>
+                        <span class="date">Mon, 30 Mar 2026 18:08</span>
+                    </div>
+                </a>
+                
+                <a href="https://news.yahoo.co.jp/pickup/6574673?source=rss" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">未就学児連れの入店を拒否 違法?</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">Yahoo!経済</span>
+                        <span class="date">Mon, 30 Mar 2026 08:58</span>
+                    </div>
+                </a>
+                
+                <a href="https://news.yahoo.co.jp/pickup/6574669?source=rss" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">日本製釣り具 中国への輸出急増</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">Yahoo!経済</span>
+                        <span class="date">Mon, 30 Mar 2026 08:32</span>
+                    </div>
+                </a>
+                
+                <a href="https://news.web.nhk/newsweb/na/na-k10015087351000" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">株価 大幅な値下がり イラン情勢長期化で世界経済への打撃懸念</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">NHK経済</span>
+                        <span class="date">Mon, 30 Mar 2026 17:18</span>
+                    </div>
+                </a>
+                
+                <a href="https://news.yahoo.co.jp/pickup/6574667?source=rss" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">南海フェリー撤退へ 和歌山-徳島</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">Yahoo!経済</span>
+                        <span class="date">Mon, 30 Mar 2026 08:10</span>
+                    </div>
+                </a>
+                
+                <a href="https://news.web.nhk/newsweb/na/na-k10015087421000" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">【きょうのおはBiz 3月30日(月)】独自の面接で“人材”を獲得</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">NHK経済</span>
+                        <span class="date">Mon, 30 Mar 2026 16:35</span>
+                    </div>
+                </a>
+                
+                <a href="https://news.yahoo.co.jp/pickup/6574659?source=rss" target="_blank" rel="noopener noreferrer" class="card">
+                    <h3 class="card-title">重油流出でワカメに被害 漁師悲痛</h3>
+                    <div class="card-footer">
+                        <span class="source-tag">Yahoo!経済</span>
+                        <span class="date">Mon, 30 Mar 2026 06:40</span>
+                    </div>
+                </a>
+                
+            </div>
+        </section>
+        
+        
+
+        <footer>
+            <p>&copy; 2024 News Digest. Generated by GitHub Actions.</p>
+        </footer>
+    </div>
+</body>
+</html>
