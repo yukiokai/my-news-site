@@ -1,19 +1,6 @@
-def format_date(date_str):
-    try:
-        if date_str:
-            if len(date_str) > 25:
-                return date_str[:22]
-            return date_str
-    except Exception:
-        pass
-    return date_str
-
-import urllib.request
-import json
-import xml.etree.ElementTree as ET
 import time
 from datetime import datetime
-import os
+import urllib.parse
 import pytz
 
 try:
@@ -23,46 +10,83 @@ except ImportError:
     print("Dependencies not met. Please run: pip install -r requirements.txt")
     exit(1)
 
-FEEDS = {
-    "📰 国内ニュース": [
-        {"url": "https://news.yahoo.co.jp/rss/topics/domestic.xml", "source": "Yahoo!国内"},
-        {"url": "https://www.nhk.or.jp/rss/news/cat1.xml", "source": "NHK社会"}
+def format_date(entry):
+    """Parse and format the publication date from a feed entry."""
+    parsed = entry.get("published_parsed") or entry.get("updated_parsed")
+    if parsed:
+        try:
+            jst = pytz.timezone("Asia/Tokyo")
+            dt = datetime.fromtimestamp(time.mktime(parsed), tz=pytz.utc).astimezone(jst)
+            return dt.strftime("%Y-%m-%d %H:%M")
+        except Exception:
+            pass
+    raw = entry.get("published") or entry.get("updated") or ""
+    return raw[:16] if len(raw) > 16 else raw
+
+def get_timestamp(entry):
+    parsed = entry.get("published_parsed") or entry.get("updated_parsed")
+    if parsed:
+        try:
+            return time.mktime(parsed)
+        except Exception:
+            pass
+    return 0
+
+def google_news_url(query):
+    """Build a Google News RSS URL for a Japanese keyword query."""
+    encoded = urllib.parse.quote(query)
+    return f"https://news.google.com/rss/search?q={encoded}&hl=ja&gl=JP&ceid=JP:ja"
+
+# --- TerraDrone 特化カテゴリ ---
+# 各カテゴリに複数の検索クエリを設定
+CATEGORIES = {
+    "🚁 ドローン・UAV動向": [
+        google_news_url("ドローン UAV"),
+        google_news_url("無人航空機 飛行"),
+        google_news_url("drone LiDAR 測量"),
     ],
-    "🌍 国際ニュース": [
-        {"url": "https://news.yahoo.co.jp/rss/topics/world.xml", "source": "Yahoo!国際"},
-        {"url": "https://www.nhk.or.jp/rss/news/cat6.xml", "source": "NHK国際"}
+    "📡 LiDAR・SLAM・点群技術": [
+        google_news_url("LiDAR 点群"),
+        google_news_url("SLAM 自己位置推定"),
+        google_news_url("三次元計測 測量"),
     ],
-    "💻 テクノロジー・IT": [
-        {"url": "https://news.yahoo.co.jp/rss/topics/it.xml", "source": "Yahoo! IT"},
-        {"url": "https://rss.itmedia.co.jp/rss/2.0/news_bursts.xml", "source": "ITmedia"}
+    "📐 測量・建設DX・i-Construction": [
+        google_news_url("測量 DX"),
+        google_news_url("i-Construction BIM CIM"),
+        google_news_url("インフラ点検 ドローン"),
     ],
-    "📈 経済・ビジネス": [
-        {"url": "https://news.yahoo.co.jp/rss/topics/business.xml", "source": "Yahoo!経済"},
-        {"url": "https://www.nhk.or.jp/rss/news/cat5.xml", "source": "NHK経済"}
-    ]
+    "💰 補助金・予算・規制情報": [
+        google_news_url("ドローン 補助金 OR 予算 OR 規制"),
+        google_news_url("測量 補助金 OR 国土交通省"),
+        google_news_url("建設 DX 補助金"),
+    ],
+    "🏗️ 建設コンサルタント・インフラ": [
+        google_news_url("建設コンサルタント"),
+        google_news_url("インフラ 点検 維持管理"),
+        google_news_url("地図 測量 国土地理院"),
+    ],
 }
 
 def fetch_feed_data():
     news_data = {}
-    for category, sources in FEEDS.items():
+    for category, urls in CATEGORIES.items():
         category_news = []
-        for source in sources:
+        for url in urls:
             try:
-                feed = feedparser.parse(source["url"])
+                feed = feedparser.parse(url)
                 for entry in feed.entries[:8]:
-                    pub_date = entry.get("published", entry.get("updated", ""))
-                    published_parsed = entry.get("published_parsed", entry.get("updated_parsed"))
-                    timestamp = time.mktime(published_parsed) if published_parsed else 0
+                    timestamp = get_timestamp(entry)
+                    source_name = getattr(entry, "source", {}).get("title", "Google News")
 
                     category_news.append({
                         "title": entry.title,
                         "link": entry.link,
-                        "source": source["source"],
-                        "date": format_date(pub_date),
+                        "source": source_name,
+                        "date": format_date(entry),
                         "timestamp": timestamp
                     })
             except Exception as e:
-                print(f"Error fetching {source['url']}: {e}")
+                print(f"Error fetching {url}: {e}")
         
         category_news.sort(key=lambda x: x["timestamp"], reverse=True)
         news_data[category] = category_news[:10]
