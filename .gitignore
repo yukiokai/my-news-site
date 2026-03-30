@@ -1,0 +1,14 @@
+# Python imports
+__pycache__/
+*.pyc
+
+# Virtual Environment
+.venv/
+venv/
+env/
+
+# Editor/OS files
+.vscode/
+.idea/
+.DS_Store
+*.swp
