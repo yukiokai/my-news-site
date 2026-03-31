@@ -177,9 +177,14 @@ def generate_html(domestic_data, international_data):
     jst = pytz.timezone("Asia/Tokyo")
     update_time = datetime.now(jst).strftime("%Y-%m-%d %H:%M:%S")
 
+    domestic_count = sum(len(v) for v in domestic_data.values())
+    intl_count = sum(len(v) for v in international_data.values())
+
     html_content = template.render(
         domestic_data=domestic_data,
         international_data=international_data,
+        domestic_count=domestic_count,
+        intl_count=intl_count,
         update_time=update_time,
     )
 
