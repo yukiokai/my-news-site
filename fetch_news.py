@@ -37,17 +37,14 @@ def get_timestamp(entry):
 
 def get_image_url(entry):
     """Extract best-effort image URL from a feed entry."""
-    # media:thumbnail (most common in Google News)
+    # Bing News format
+    if hasattr(entry, "news_image"):
+        return entry.news_image
+    
+    # media:thumbnail (some standard RSS)
     thumbnails = getattr(entry, "media_thumbnail", None)
     if thumbnails and isinstance(thumbnails, list) and thumbnails[0].get("url"):
         return thumbnails[0]["url"]
-
-    # media:content
-    media_content = getattr(entry, "media_content", None)
-    if media_content and isinstance(media_content, list):
-        for m in media_content:
-            if m.get("url") and m.get("medium") in ("image", None):
-                return m["url"]
 
     # enclosures
     for enc in getattr(entry, "enclosures", []):
@@ -55,77 +52,64 @@ def get_image_url(entry):
         if ctype.startswith("image"):
             return enc.get("href", enc.get("url", ""))
 
-    # img tag inside summary
-    summary = entry.get("summary", "")
-    m = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', summary)
-    if m:
-        return m.group(1)
-
     return ""
 
 
-def google_news_url(query, lang="ja", country="JP"):
+def news_url(query, mkt="ja-JP"):
     encoded = urllib.parse.quote(query)
-    return f"https://news.google.com/rss/search?q={encoded}&hl={lang}&gl={country}&ceid={country}:{lang}"
+    return f"https://www.bing.com/news/search?q={encoded}&format=rss&mkt={mkt}"
 
 
 # ─── 国内カテゴリ ────────────────────────────────────────────────
 DOMESTIC_CATEGORIES = {
     "🚁 ドローン・UAV動向": [
-        google_news_url("ドローン UAV"),
-        google_news_url("無人航空機 飛行"),
-        google_news_url("ドローン 測量 OR 点検 OR 物流"),
-        google_news_url("ドローン 新技術 OR 開発"),
+        news_url("ドローン UAV", "ja-JP"),
+        news_url("無人航空機 飛行", "ja-JP"),
+        news_url("ドローン 測量 OR 点検", "ja-JP"),
+        news_url("ドローン 開発", "ja-JP"),
     ],
     "📡 LiDAR・SLAM・点群技術": [
-        google_news_url("LiDAR 点群"),
-        google_news_url("SLAM 自己位置推定"),
-        google_news_url("三次元計測 OR 3Dスキャン"),
-        google_news_url("レーザースキャナー 測量"),
+        news_url("LiDAR 点群", "ja-JP"),
+        news_url("SLAM 自己位置推定", "ja-JP"),
+        news_url("三次元計測 OR 3Dスキャン", "ja-JP"),
+        news_url("レーザースキャナー 測量", "ja-JP"),
     ],
     "📐 測量・建設DX・i-Construction": [
-        google_news_url("測量 DX 建設"),
-        google_news_url("i-Construction BIM CIM"),
-        google_news_url("インフラ点検 ドローン 土木"),
-        google_news_url("建設 デジタル化 OR ICT"),
+        news_url("測量 DX 建設", "ja-JP"),
+        news_url("i-Construction BIM CIM", "ja-JP"),
+        news_url("インフラ点検 土木", "ja-JP"),
     ],
     "💰 補助金・予算・規制情報": [
-        google_news_url("ドローン 補助金 OR 予算 OR 規制"),
-        google_news_url("測量 補助金 OR 国土交通省"),
-        google_news_url("建設 DX 補助金 OR 助成金"),
-        google_news_url("無人機 規制 OR 法改正"),
+        news_url("ドローン 補助金 OR 改正", "ja-JP"),
+        news_url("測量 補助金 OR 国土交通省", "ja-JP"),
+        news_url("建設 DX 補助金", "ja-JP"),
     ],
     "🏗️ 建設コンサルタント・インフラ": [
-        google_news_url("建設コンサルタント"),
-        google_news_url("インフラ 点検 維持管理"),
-        google_news_url("国土地理院 測量 地図"),
-        google_news_url("橋梁 OR トンネル 点検 DX"),
+        news_url("建設コンサルタント", "ja-JP"),
+        news_url("インフラ 点検 維持管理", "ja-JP"),
+        news_url("国土地理院 測量 地図", "ja-JP"),
     ],
 }
 
 # ─── 海外カテゴリ ───────────────────────────────────────────────
 INTERNATIONAL_CATEGORIES = {
     "🚁 Drone & UAV Technology": [
-        google_news_url("UAV LiDAR survey mapping", "en", "US"),
-        google_news_url("drone autonomous flight technology", "en", "US"),
-        google_news_url("unmanned aerial vehicle inspection infrastructure", "en", "US"),
-        google_news_url("commercial drone industry news", "en", "US"),
+        news_url("UAV LiDAR survey mapping", "en-US"),
+        news_url("drone autonomous flight", "en-US"),
+        news_url("commercial drone industry", "en-US"),
     ],
     "📡 LiDAR, SLAM & 3D Technology": [
-        google_news_url("LiDAR point cloud 3D mapping technology", "en", "US"),
-        google_news_url("SLAM simultaneous localization mapping robotics", "en", "US"),
-        google_news_url("3D scanning survey technology industry", "en", "US"),
-        google_news_url("mobile mapping lidar autonomous", "en", "US"),
+        news_url("LiDAR point cloud 3D mapping", "en-US"),
+        news_url("SLAM Simultaneous Localization and Mapping", "en-US"),
+        news_url("3D scanning survey technology", "en-US"),
     ],
     "🗺️ Geospatial & Surveying Tech": [
-        google_news_url("geospatial technology surveying innovation", "en", "US"),
-        google_news_url("BIM GIS construction digital twin", "en", "US"),
-        google_news_url("remote sensing satellite drone mapping", "en", "US"),
+        news_url("geospatial technology surveying", "en-US"),
+        news_url("BIM GIS digital twin", "en-US"),
     ],
     "🤖 Autonomous Systems & Robotics": [
-        google_news_url("autonomous drone robotics industry 2025", "en", "US"),
-        google_news_url("mobile robotics SLAM navigation research", "en", "US"),
-        google_news_url("robot autonomous inspection infrastructure", "en", "US"),
+        news_url("autonomous drone robotics inspection", "en-US"),
+        news_url("mobile robotics navigation", "en-US"),
     ],
 }
 
@@ -145,12 +129,13 @@ def fetch_category_data(categories, max_per_category=15):
                         continue
                     seen_links.add(link)
 
-                    source_name = ""
-                    src = getattr(entry, "source", None)
-                    if src and isinstance(src, dict):
-                        source_name = src.get("title", "")
+                    source_name = getattr(entry, "news_source", "")
                     if not source_name:
-                        source_name = getattr(feed.feed, "title", "Google News")
+                        src = getattr(entry, "source", None)
+                        if src and isinstance(src, dict):
+                            source_name = src.get("title", "")
+                    if not source_name:
+                        source_name = getattr(feed.feed, "title", "Bing News")
 
                     category_news.append({
                         "title": entry.title,
