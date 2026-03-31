@@ -2,6 +2,7 @@ import time
 import re
 import urllib.parse
 import pytz
+import difflib
 from datetime import datetime
 
 try:
@@ -70,60 +71,66 @@ def news_url(query, mkt="ja-JP"):
 # ─── 国内カテゴリ ────────────────────────────────────────────────
 DOMESTIC_CATEGORIES = {
     "🚁 ドローン・UAV動向": [
-        news_url("ドローン UAV", "ja-JP"),
-        news_url("無人航空機 飛行", "ja-JP"),
+        news_url("ドローン OR UAV OR 無人航空機", "ja-JP"),
         news_url("ドローン 測量 OR 点検", "ja-JP"),
-        news_url("ドローン 開発", "ja-JP"),
+        news_url("ドローン 開発 OR 業界", "ja-JP"),
     ],
     "📡 LiDAR・SLAM・点群技術": [
-        news_url("LiDAR 点群", "ja-JP"),
-        news_url("SLAM 自己位置推定", "ja-JP"),
+        news_url("LiDAR OR SLAM", "ja-JP"),
+        news_url("点群 OR 自己位置推定", "ja-JP"),
         news_url("三次元計測 OR 3Dスキャン", "ja-JP"),
-        news_url("レーザースキャナー 測量", "ja-JP"),
     ],
     "📐 測量・建設DX・i-Construction": [
-        news_url("測量 DX 建設", "ja-JP"),
-        news_url("i-Construction BIM CIM", "ja-JP"),
+        news_url("測量 DX", "ja-JP"),
+        news_url("i-Construction OR BIM OR CIM", "ja-JP"),
         news_url("インフラ点検 土木", "ja-JP"),
     ],
     "💰 補助金・予算・規制情報": [
-        news_url("ドローン 補助金 OR 改正", "ja-JP"),
-        news_url("測量 補助金 OR 国土交通省", "ja-JP"),
+        news_url("ドローン 補助金 OR 国土交通省", "ja-JP"),
+        news_url("ドローン 規制 OR 改正", "ja-JP"),
         news_url("建設 DX 補助金", "ja-JP"),
     ],
     "🏗️ 建設コンサルタント・インフラ": [
         news_url("建設コンサルタント", "ja-JP"),
-        news_url("インフラ 点検 維持管理", "ja-JP"),
-        news_url("国土地理院 測量 地図", "ja-JP"),
+        news_url("インフラ 維持管理 OR 点検", "ja-JP"),
+        news_url("国土地理院 測量", "ja-JP"),
     ],
 }
 
 # ─── 海外カテゴリ ───────────────────────────────────────────────
 INTERNATIONAL_CATEGORIES = {
     "🚁 Drone & UAV Technology": [
-        news_url("drone OR UAV commercial industry", "en-US"),
-        news_url("drone autonomous flight", "en-US"),
-        news_url("UAV survey mapping OR inspection", "en-US"),
+        news_url("drone OR UAV OR UAS", "en-US"),
+        news_url("commercial drone OR autonomous flight", "en-US"),
+        news_url("UAV survey OR drone inspection", "en-US"),
     ],
     "📡 LiDAR, SLAM & 3D Technology": [
-        news_url("LiDAR OR SLAM 3D mapping", "en-US"),
-        news_url("SLAM Simultaneous Localization and Mapping", "en-US"),
-        news_url("3D scanning survey technology", "en-US"),
+        news_url("LiDAR OR SLAM OR point cloud", "en-US"),
+        news_url("3D mapping OR 3D scanning", "en-US"),
+        news_url("survey technology OR simultaneous localization", "en-US"),
     ],
     "🗺️ Geospatial & Surveying Tech": [
-        news_url("geospatial technology OR surveying", "en-US"),
-        news_url("BIM OR GIS digital twin", "en-US"),
+        news_url("geospatial OR surveying", "en-US"),
+        news_url("BIM OR GIS OR digital twin", "en-US"),
     ],
     "🤖 Autonomous Systems & Robotics": [
-        news_url("autonomous robotics OR inspection", "en-US"),
-        news_url("mobile robotics navigation", "en-US"),
+        news_url("autonomous robotics OR drone inspection", "en-US"),
+        news_url("mobile robotics OR autonomous navigation", "en-US"),
     ],
 }
+
+
+def is_similar_title(new_title, existing_titles, threshold=0.65):
+    for et in existing_titles:
+        if difflib.SequenceMatcher(None, new_title, et).ratio() > threshold:
+            return True
+    return False
 
 
 def fetch_category_data(categories, max_per_category=15):
     news_data = {}
     seen_links = set()
+    seen_titles = set()
 
     for category, urls in categories.items():
         category_news = []
@@ -134,7 +141,13 @@ def fetch_category_data(categories, max_per_category=15):
                     link = entry.get("link", "")
                     if link in seen_links:
                         continue
+                    
+                    # Deduplicate by title similarity
+                    if is_similar_title(entry.title, seen_titles):
+                        continue
+
                     seen_links.add(link)
+                    seen_titles.add(entry.title)
 
                     source_name = getattr(entry, "news_source", "")
                     if not source_name:
