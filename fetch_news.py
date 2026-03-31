@@ -7,6 +7,7 @@ from datetime import datetime
 try:
     import feedparser
     from jinja2 import Environment, FileSystemLoader
+    from deep_translator import GoogleTranslator
 except ImportError:
     print("Dependencies not met. Please run: pip install -r requirements.txt")
     exit(1)
@@ -37,22 +38,28 @@ def get_timestamp(entry):
 
 def get_image_url(entry):
     """Extract best-effort image URL from a feed entry."""
+    url = ""
     # Bing News format
     if hasattr(entry, "news_image"):
-        return entry.news_image
+        url = entry.news_image
+    else:
+        # media:thumbnail (some standard RSS)
+        thumbnails = getattr(entry, "media_thumbnail", None)
+        if thumbnails and isinstance(thumbnails, list) and thumbnails[0].get("url"):
+            url = thumbnails[0]["url"]
+        else:
+            # enclosures
+            for enc in getattr(entry, "enclosures", []):
+                ctype = enc.get("type", "")
+                if ctype.startswith("image"):
+                    url = enc.get("href", enc.get("url", ""))
+                    break
     
-    # media:thumbnail (some standard RSS)
-    thumbnails = getattr(entry, "media_thumbnail", None)
-    if thumbnails and isinstance(thumbnails, list) and thumbnails[0].get("url"):
-        return thumbnails[0]["url"]
-
-    # enclosures
-    for enc in getattr(entry, "enclosures", []):
-        ctype = enc.get("type", "")
-        if ctype.startswith("image"):
-            return enc.get("href", enc.get("url", ""))
-
-    return ""
+    # Improve Bing image quality if it's a Bing thumbnail URL
+    if url and "bing.com/th?" in url and "w=" not in url:
+        url += "&w=800"
+        
+    return url
 
 
 def news_url(query, mkt="ja-JP"):
@@ -94,21 +101,21 @@ DOMESTIC_CATEGORIES = {
 # ─── 海外カテゴリ ───────────────────────────────────────────────
 INTERNATIONAL_CATEGORIES = {
     "🚁 Drone & UAV Technology": [
-        news_url("UAV LiDAR survey mapping", "en-US"),
+        news_url("drone OR UAV commercial industry", "en-US"),
         news_url("drone autonomous flight", "en-US"),
-        news_url("commercial drone industry", "en-US"),
+        news_url("UAV survey mapping OR inspection", "en-US"),
     ],
     "📡 LiDAR, SLAM & 3D Technology": [
-        news_url("LiDAR point cloud 3D mapping", "en-US"),
+        news_url("LiDAR OR SLAM 3D mapping", "en-US"),
         news_url("SLAM Simultaneous Localization and Mapping", "en-US"),
         news_url("3D scanning survey technology", "en-US"),
     ],
     "🗺️ Geospatial & Surveying Tech": [
-        news_url("geospatial technology surveying", "en-US"),
-        news_url("BIM GIS digital twin", "en-US"),
+        news_url("geospatial technology OR surveying", "en-US"),
+        news_url("BIM OR GIS digital twin", "en-US"),
     ],
     "🤖 Autonomous Systems & Robotics": [
-        news_url("autonomous drone robotics inspection", "en-US"),
+        news_url("autonomous robotics OR inspection", "en-US"),
         news_url("mobile robotics navigation", "en-US"),
     ],
 }
@@ -155,7 +162,7 @@ def fetch_category_data(categories, max_per_category=15):
     return news_data
 
 
-def generate_html(domestic_data, international_data):
+def generate_html(domestic_data, international_data, international_translated):
     env = Environment(loader=FileSystemLoader("."))
     template = env.get_template("template.html")
 
@@ -168,6 +175,7 @@ def generate_html(domestic_data, international_data):
     html_content = template.render(
         domestic_data=domestic_data,
         international_data=international_data,
+        international_translated=international_translated,
         domestic_count=domestic_count,
         intl_count=intl_count,
         update_time=update_time,
@@ -185,7 +193,24 @@ if __name__ == "__main__":
 
     print("Fetching international news...")
     international = fetch_category_data(INTERNATIONAL_CATEGORIES, max_per_category=15)
+    
+    print("Translating international news...")
+    international_translated = {}
+    translator = GoogleTranslator(source='auto', target='ja')
+    
+    for category, items in international.items():
+        translated_items = []
+        for item in items:
+            new_item = item.copy()
+            try:
+                new_item["title"] = translator.translate(item["title"])
+                if item.get("summary"):
+                    new_item["summary"] = translator.translate(item["summary"])
+            except Exception as e:
+                print(f"  [WARN] Translation failed for {item['title'][:20]}: {e}")
+            translated_items.append(new_item)
+        international_translated[category] = translated_items
 
     print("Generating HTML...")
-    generate_html(domestic, international)
+    generate_html(domestic, international, international_translated)
     print("Done!")
