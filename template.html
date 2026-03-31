@@ -225,16 +225,18 @@
             position: absolute;
             inset: 0;
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 0.5rem;
-            color: var(--text-dim);
-            font-size: 0.75rem;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            padding: 2rem;
         }
 
-        .card-thumb .no-image-icon svg {
-            opacity: 0.3;
+        .card-thumb .no-image-icon img {
+            width: 60%;
+            height: auto;
+            object-fit: contain;
+            opacity: 0.8;
+            filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
         }
 
         /* Content area */
@@ -382,11 +384,11 @@
                             <img src="{{ item.image }}" alt="{{ item.title }}" loading="lazy"
                                  onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
                             <div class="no-image-icon" style="display:none">
-                                <img src="logo.png" alt="TerraDrone" style="width: 50%; height: auto; opacity: 0.7;">
+                                <img src="logo.png" alt="TerraDrone">
                             </div>
                             {% else %}
                             <div class="no-image-icon">
-                                <img src="logo.png" alt="TerraDrone" style="width: 50%; height: auto; opacity: 0.7;">
+                                <img src="logo.png" alt="TerraDrone">
                             </div>
                             {% endif %}
                         </div>
@@ -429,11 +431,11 @@
                             <img src="{{ item.image }}" alt="{{ item.title }}" loading="lazy"
                                  onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
                             <div class="no-image-icon" style="display:none">
-                                <img src="logo.png" alt="TerraDrone" style="width: 50%; height: auto; opacity: 0.7;">
+                                <img src="logo.png" alt="TerraDrone">
                             </div>
                             {% else %}
                             <div class="no-image-icon">
-                                <img src="logo.png" alt="TerraDrone" style="width: 50%; height: auto; opacity: 0.7;">
+                                <img src="logo.png" alt="TerraDrone">
                             </div>
                             {% endif %}
                         </div>
@@ -476,11 +478,11 @@
                             <img src="{{ item.image }}" alt="{{ item.title }}" loading="lazy"
                                  onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
                             <div class="no-image-icon" style="display:none">
-                                <img src="logo.png" alt="TerraDrone" style="width: 50%; height: auto; opacity: 0.7;">
+                                <img src="logo.png" alt="TerraDrone">
                             </div>
                             {% else %}
                             <div class="no-image-icon">
-                                <img src="logo.png" alt="TerraDrone" style="width: 50%; height: auto; opacity: 0.7;">
+                                <img src="logo.png" alt="TerraDrone">
                             </div>
                             {% endif %}
                         </div>
