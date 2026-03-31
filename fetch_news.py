@@ -38,7 +38,7 @@ def get_timestamp(entry):
 
 
 def get_image_url(entry):
-    """Extract best-effort image URL from a feed entry."""
+    """Extract best-effort image URL from a feed entry. Optimized for Bing quality."""
     url = ""
     # Bing News format
     if hasattr(entry, "news_image"):
@@ -57,8 +57,11 @@ def get_image_url(entry):
                     break
     
     # Improve Bing image quality if it's a Bing thumbnail URL
-    if url and "bing.com/th?" in url and "w=" not in url:
-        url += "&w=800"
+    if url and "bing.com/th?" in url:
+        # Clean up existing parameters to prevent resolution limiting
+        base_url = url.split('&')[0] if '&' in url else url
+        # Use w=1200 for higher resolution, and ensure c=14 for better scaling
+        url = f"{base_url}&w=1200&h=675&c=14&rs=2&pid=News"
         
     return url
 
@@ -69,58 +72,75 @@ def news_url(query, mkt="ja-JP"):
 
 
 # ─── 国内カテゴリ ────────────────────────────────────────────────
+# Bing RSSのOR検索挙動が不安定なため、個別のキーワードリストとして構成
 DOMESTIC_CATEGORIES = {
     "🚁 ドローン・UAV動向": [
-        news_url("ドローン OR UAV OR 無人航空機", "ja-JP"),
-        news_url("ドローン 測量 OR 点検", "ja-JP"),
-        news_url("ドローン 開発 OR 業界", "ja-JP"),
+        news_url("ドローン", "ja-JP"),
+        news_url("UAV", "ja-JP"),
+        news_url("無人航空機", "ja-JP"),
+        news_url("ドローン 測量", "ja-JP"),
+        news_url("ドローン 点検", "ja-JP"),
     ],
     "📡 LiDAR・SLAM・点群技術": [
-        news_url("LiDAR OR SLAM", "ja-JP"),
-        news_url("点群 OR 自己位置推定", "ja-JP"),
-        news_url("三次元計測 OR 3Dスキャン", "ja-JP"),
+        news_url("LiDAR", "ja-JP"),
+        news_url("SLAM", "ja-JP"),
+        news_url("高精度三次元地図", "ja-JP"),
+        news_url("自己位置推定", "ja-JP"),
+        news_url("3Dスキャン", "ja-JP"),
     ],
     "📐 測量・建設DX・i-Construction": [
-        news_url("測量 DX", "ja-JP"),
-        news_url("i-Construction OR BIM OR CIM", "ja-JP"),
-        news_url("インフラ点検 土木", "ja-JP"),
+        news_url("建設DX", "ja-JP"),
+        news_url("i-Construction", "ja-JP"),
+        news_url("BIM/CIM", "ja-JP"),
+        news_url("国土交通省 測量", "ja-JP"),
+        news_url("インフラ点検", "ja-JP"),
     ],
     "💰 補助金・予算・規制情報": [
-        news_url("ドローン 補助金 OR 国土交通省", "ja-JP"),
-        news_url("ドローン 規制 OR 改正", "ja-JP"),
-        news_url("建設 DX 補助金", "ja-JP"),
+        news_url("ドローン 補助金", "ja-JP"),
+        news_url("ドローン 規制", "ja-JP"),
+        news_url("ドローン 法律", "ja-JP"),
+        news_url("ドローン 登録", "ja-JP"),
     ],
     "🏗️ 建設コンサルタント・インフラ": [
         news_url("建設コンサルタント", "ja-JP"),
-        news_url("インフラ 維持管理 OR 点検", "ja-JP"),
-        news_url("国土地理院 測量", "ja-JP"),
+        news_url("インフラ 維持管理", "ja-JP"),
+        news_url("国土地理院", "ja-JP"),
     ],
 }
 
 # ─── 海外カテゴリ ───────────────────────────────────────────────
 INTERNATIONAL_CATEGORIES = {
     "🚁 Drone & UAV Technology": [
-        news_url("drone OR UAV OR UAS", "en-US"),
-        news_url("commercial drone OR autonomous flight", "en-US"),
-        news_url("UAV survey OR drone inspection", "en-US"),
+        news_url("drone", "en-US"),
+        news_url("UAV", "en-US"),
+        news_url("UAS", "en-US"),
+        news_url("autonomous flight", "en-US"),
+        news_url("drone inspection", "en-US"),
     ],
     "📡 LiDAR, SLAM & 3D Technology": [
-        news_url("LiDAR OR SLAM OR point cloud", "en-US"),
-        news_url("3D mapping OR 3D scanning", "en-US"),
-        news_url("survey technology OR simultaneous localization", "en-US"),
+        news_url("LiDAR", "en-US"),
+        news_url("SLAM technology", "en-US"),
+        news_url("point cloud mapping", "en-US"),
+        news_url("3D scanning", "en-US"),
     ],
     "🗺️ Geospatial & Surveying Tech": [
-        news_url("geospatial OR surveying", "en-US"),
-        news_url("BIM OR GIS OR digital twin", "en-US"),
+        news_url("geospatial industry", "en-US"),
+        news_url("surveying technology", "en-US"),
+        news_url("digital twin drone", "en-US"),
     ],
     "🤖 Autonomous Systems & Robotics": [
-        news_url("autonomous robotics OR drone inspection", "en-US"),
-        news_url("mobile robotics OR autonomous navigation", "en-US"),
+        news_url("autonomous robotics", "en-US"),
+        news_url("mobile robotics", "en-US"),
+        news_url("autonomous navigation", "en-US"),
     ],
 }
 
 
-def is_similar_title(new_title, existing_titles, threshold=0.65):
+def is_similar_title(new_title, existing_titles, threshold=0.85):
+    """
+    タイトルの類似度判定。
+    閾値を0.85に設定することで、類似トピックでも別メディアの記事であれば許可するように緩和。
+    """
     for et in existing_titles:
         if difflib.SequenceMatcher(None, new_title, et).ratio() > threshold:
             return True
@@ -136,18 +156,25 @@ def fetch_category_data(categories, max_per_category=15):
         category_news = []
         for url in urls:
             try:
+                # 取得を試行
                 feed = feedparser.parse(url)
-                for entry in feed.entries[:12]:
+                # 1つのキーワードにつき上位10件程度を見る
+                for entry in feed.entries[:10]:
                     link = entry.get("link", "")
                     if link in seen_links:
                         continue
                     
+                    title = entry.title
+                    # タイトルが「No Image」等の不適切なものはスキップ
+                    if not title or "no image" in title.lower():
+                        continue
+
                     # Deduplicate by title similarity
-                    if is_similar_title(entry.title, seen_titles):
+                    if is_similar_title(title, seen_titles):
                         continue
 
                     seen_links.add(link)
-                    seen_titles.add(entry.title)
+                    seen_titles.add(title)
 
                     source_name = getattr(entry, "news_source", "")
                     if not source_name:
@@ -158,17 +185,18 @@ def fetch_category_data(categories, max_per_category=15):
                         source_name = getattr(feed.feed, "title", "Bing News")
 
                     category_news.append({
-                        "title": entry.title,
+                        "title": title,
                         "link": link,
                         "source": source_name,
                         "date": format_date(entry),
                         "timestamp": get_timestamp(entry),
                         "image": get_image_url(entry),
-                        "summary": re.sub(r'<[^>]+>', '', entry.get("summary", ""))[:100],
+                        "summary": re.sub(r'<[^>]+>', '', entry.get("summary", ""))[:120],
                     })
             except Exception as e:
                 print(f"  [WARN] Error fetching {url}: {e}")
 
+        # 新しい順にソートして最大15件
         category_news.sort(key=lambda x: x["timestamp"], reverse=True)
         news_data[category] = category_news[:max_per_category]
 
@@ -202,10 +230,11 @@ def generate_html(domestic_data, international_data, international_translated):
 
 if __name__ == "__main__":
     print("Fetching domestic news...")
-    domestic = fetch_category_data(DOMESTIC_CATEGORIES, max_per_category=15)
+    domestic = fetch_category_data(DOMESTIC_CATEGORIES, max_per_category=10)
 
     print("Fetching international news...")
-    international = fetch_category_data(INTERNATIONAL_CATEGORIES, max_per_category=15)
+    # 海外ニュースは翻訳負荷を考慮し、トップ5件ずつに限定（翻訳精度維持のため）
+    international = fetch_category_data(INTERNATIONAL_CATEGORIES, max_per_category=8)
     
     print("Translating international news...")
     international_translated = {}
@@ -215,12 +244,23 @@ if __name__ == "__main__":
         translated_items = []
         for item in items:
             new_item = item.copy()
+            # 翻訳に失敗しても元データを維持
             try:
-                new_item["title"] = translator.translate(item["title"])
+                # タイトル翻訳 (最大文字数制限を意識)
+                if item["title"]:
+                    new_item["title"] = translator.translate(item["title"])
+                
+                # サマリー翻訳
                 if item.get("summary"):
+                    # 翻訳後のサマリーは少し長めに
                     new_item["summary"] = translator.translate(item["summary"])
+                
+                time.sleep(0.3) # 負荷軽減のためのウェイト
             except Exception as e:
                 print(f"  [WARN] Translation failed for {item['title'][:20]}: {e}")
+                # 失敗時は英語をそのまま表示
+                pass
+            
             translated_items.append(new_item)
         international_translated[category] = translated_items
 
