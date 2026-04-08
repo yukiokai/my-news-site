@@ -152,6 +152,7 @@ def fetch_category_data(categories, max_per_category=15):
     news_data = {}
     seen_links = set()
     seen_titles = set()
+    now_ts = time.time()
 
     for category, urls in categories.items():
         category_news = []
@@ -159,8 +160,8 @@ def fetch_category_data(categories, max_per_category=15):
             try:
                 # 取得を試行
                 feed = feedparser.parse(url)
-                # 1つのキーワードにつき上位10件程度を見る
-                for entry in feed.entries[:10]:
+                # 1つのキーワードにつき上位15件程度を見る
+                for entry in feed.entries[:15]:
                     link = entry.get("link", "")
                     if link in seen_links:
                         continue
@@ -168,6 +169,11 @@ def fetch_category_data(categories, max_per_category=15):
                     title = entry.title
                     # タイトルが「No Image」等の不適切なものはスキップ
                     if not title or "no image" in title.lower():
+                        continue
+
+                    # 古い記事（30日以上前）を除外
+                    entry_ts = get_timestamp(entry)
+                    if entry_ts > 0 and (now_ts - entry_ts > 30 * 24 * 3600):
                         continue
 
                     # Deduplicate by title similarity
@@ -235,9 +241,10 @@ def generate_html(domestic_data, international_data, international_translated, s
 
 def fetch_stock_data():
     try:
+        import yfinance as yf
         ticker = yf.Ticker("278A.T")
-        history = ticker.history(period="2d")
-        if len(history) >= 1:
+        history = ticker.history(period="5d")
+        if history is not None and not history.empty and len(history) >= 1:
             current_price = history['Close'].iloc[-1]
             if len(history) >= 2:
                 prev_price = history['Close'].iloc[-2]
@@ -255,6 +262,29 @@ def fetch_stock_data():
                     "change": "0",
                     "change_percent": "0.00%",
                     "is_up": True
+                }
+        else:
+            print("yfinance history empty. Trying Google Finance fallback...")
+            import urllib.request
+            import re
+            url = "https://www.google.com/finance/quote/278A:TYO"
+            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+            html = urllib.request.urlopen(req).read().decode('utf-8')
+            price_match = re.search(r'class="YMlKec fxKbKc"[^>]*>([^<]+)', html)
+            if price_match:
+                price_str = price_match.group(1).replace('¥', '').replace('\\', '').replace(',', '').strip()
+                price = float(price_str)
+                
+                # Fetch change string
+                change_match = re.search(r'class="JwB6zf"[^>]*>([^<]+)', html)
+                change_str = change_match.group(1).strip() if change_match else "0.00%"
+                is_up = not change_str.startswith("-")
+
+                return {
+                    "price": f"{price:,.0f}",
+                    "change": "-",
+                    "change_percent": change_str,
+                    "is_up": is_up
                 }
     except Exception as e:
         print(f"Error fetching stock data: {e}")
