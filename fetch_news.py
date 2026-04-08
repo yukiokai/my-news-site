@@ -82,18 +82,18 @@ DOMESTIC_CATEGORIES = {
         news_url("ドローン 点検", "ja-JP"),
     ],
     "📡 LiDAR・SLAM・点群技術": [
-        news_url("LiDAR", "ja-JP"),
-        news_url("SLAM", "ja-JP"),
-        news_url("高精度三次元地図", "ja-JP"),
-        news_url("自己位置推定", "ja-JP"),
-        news_url("3Dスキャン", "ja-JP"),
+        news_url("LiDAR ドローン", "ja-JP"),
+        news_url("SLAM ドローン", "ja-JP"),
+        news_url("点群データ 測量", "ja-JP"),
+        news_url("自己位置推定 ロボット", "ja-JP"),
+        news_url("3Dモデル 測量", "ja-JP"),
     ],
     "📐 測量・建設DX・i-Construction": [
         news_url("建設DX", "ja-JP"),
         news_url("i-Construction", "ja-JP"),
         news_url("BIM/CIM", "ja-JP"),
-        news_url("国土交通省 測量", "ja-JP"),
-        news_url("インフラ点検", "ja-JP"),
+        news_url("測量 ドローン", "ja-JP"),
+        news_url("インフラ点検 ドローン", "ja-JP"),
     ],
     "💰 補助金・予算・規制情報": [
         news_url("ドローン 補助金", "ja-JP"),
@@ -195,6 +195,9 @@ def fetch_category_data(categories, max_per_category=15):
                     })
             except Exception as e:
                 print(f"  [WARN] Error fetching {url}: {e}")
+            
+            # APIのレート制限（連続アクセスによるブロック）を回避するため1秒待機
+            time.sleep(1)
 
         # 新しい順にソートして最大15件
         category_news.sort(key=lambda x: x["timestamp"], reverse=True)
