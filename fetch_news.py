@@ -9,6 +9,7 @@ try:
     import feedparser
     from jinja2 import Environment, FileSystemLoader
     from deep_translator import GoogleTranslator
+    import yfinance as yf
 except ImportError:
     print("Dependencies not met. Please run: pip install -r requirements.txt")
     exit(1)
@@ -206,7 +207,7 @@ def fetch_category_data(categories, max_per_category=15):
     return news_data
 
 
-def generate_html(domestic_data, international_data, international_translated):
+def generate_html(domestic_data, international_data, international_translated, stock_data=None):
     env = Environment(loader=FileSystemLoader("."))
     template = env.get_template("template.html")
 
@@ -223,6 +224,7 @@ def generate_html(domestic_data, international_data, international_translated):
         domestic_count=domestic_count,
         intl_count=intl_count,
         update_time=update_time,
+        stock_data=stock_data,
     )
 
     with open("index.html", "w", encoding="utf-8") as f:
@@ -231,13 +233,44 @@ def generate_html(domestic_data, international_data, international_translated):
     print(f"Generated index.html at {update_time} JST.")
 
 
+def fetch_stock_data():
+    try:
+        ticker = yf.Ticker("278A.T")
+        history = ticker.history(period="2d")
+        if len(history) >= 1:
+            current_price = history['Close'].iloc[-1]
+            if len(history) >= 2:
+                prev_price = history['Close'].iloc[-2]
+                change = current_price - prev_price
+                change_percent = (change / prev_price) * 100
+                return {
+                    "price": f"{current_price:,.0f}",
+                    "change": f"{abs(change):,.0f}",
+                    "change_percent": f"{abs(change_percent):.2f}%",
+                    "is_up": change >= 0
+                }
+            else:
+                return {
+                    "price": f"{current_price:,.0f}",
+                    "change": "0",
+                    "change_percent": "0.00%",
+                    "is_up": True
+                }
+    except Exception as e:
+        print(f"Error fetching stock data: {e}")
+    return None
+
+
 if __name__ == "__main__":
+    print("Fetching TerraDrone stock price...")
+    stock_data = fetch_stock_data()
+
     print("Fetching domestic news...")
     domestic = fetch_category_data(DOMESTIC_CATEGORIES, max_per_category=10)
 
     print("Fetching international news...")
-    # 海外ニュースは翻訳負荷を考慮し、トップ5件ずつに限定（翻訳精度維持のため）
-    international = fetch_category_data(INTERNATIONAL_CATEGORIES, max_per_category=8)
+    # 海外ニュースの取得量を増加
+    international = fetch_category_data(INTERNATIONAL_CATEGORIES, max_per_category=15)
     
     print("Translating international news...")
     international_translated = {}
@@ -268,5 +301,5 @@ if __name__ == "__main__":
         international_translated[category] = translated_items
 
     print("Generating HTML...")
-    generate_html(domestic, international, international_translated)
+    generate_html(domestic, international, international_translated, stock_data)
     print("Done!")
