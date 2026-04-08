@@ -71,12 +71,52 @@
             color: var(--accent);
         }
 
+        /* ── Stock Ticker ────────────────────────── */
+        .stock-ticker {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-top: 1rem;
+            padding: 0.5rem 1.25rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            font-size: 0.9rem;
+        }
+
+        .stock-name {
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .stock-price {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--text);
+        }
+
+        .stock-change {
+            font-weight: 600;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.2rem;
+        }
+
+        .stock-change.up {
+            color: var(--green);
+        }
+
+        .stock-change.down {
+            color: #f43f5e;
+        }
+
         /* ── Tab Navigation ──────────────────────── */
         .tab-nav {
             display: flex;
             justify-content: center;
             gap: 0.5rem;
-            margin-top: 2rem;
+            margin-top: 1.5rem;
             padding: 0 1rem;
         }
 
@@ -342,12 +382,32 @@
 <header class="site-header">
     <h1>Okai's News Digest</h1>
     <p class="tagline">TerraDrone業界情報 | ドローン・LiDAR・SLAM・測量・建設DX</p>
-    <span class="update-badge">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-        </svg>
-        最終更新: {{ update_time }} JST
-    </span>
+
+    {% if stock_data %}
+    <div style="text-align: center;">
+        <div class="stock-ticker">
+            <span class="stock-name">TerraDrone (278A.T)</span>
+            <span class="stock-price">¥{{ stock_data.price }}</span>
+            <span class="stock-change {% if stock_data.is_up %}up{% else %}down{% endif %}">
+                {% if stock_data.is_up %}
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+                {% else %}
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                {% endif %}
+                {{ stock_data.change }} ({{ stock_data.change_percent }})
+            </span>
+        </div>
+    </div>
+    {% endif %}
+
+    <div style="text-align: center;">
+        <span class="update-badge">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+            最終更新: {{ update_time }} JST
+        </span>
+    </div>
 
     <!-- Tab Nav -->
     <nav class="tab-nav">
