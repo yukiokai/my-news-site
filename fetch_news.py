@@ -107,6 +107,17 @@ DOMESTIC_CATEGORIES = {
         news_url("インフラ 維持管理", "ja-JP"),
         news_url("国土地理院", "ja-JP"),
     ],
+    "🛠️ 測量機器・LiDAR・SLAM (新製品・メーカー動向)": [
+        news_url("Trimble 測量", "ja-JP"),
+        news_url("Leica 測量機器", "ja-JP"),
+        news_url("CHCNAV ドローン", "ja-JP"),
+        news_url("トプコン 新製品", "ja-JP"),
+        news_url("YellowScan LiDAR", "ja-JP"),
+        news_url("FLIGHTS LiDAR", "ja-JP"),
+        news_url("RIEGL LiDAR", "ja-JP"),
+        news_url("3Dスキャナー 測量機器", "ja-JP"),
+        news_url("SLAM 測量", "ja-JP"),
+    ],
 }
 
 # ─── 海外カテゴリ ───────────────────────────────────────────────
@@ -133,6 +144,15 @@ INTERNATIONAL_CATEGORIES = {
         news_url("autonomous robotics", "en-US"),
         news_url("mobile robotics", "en-US"),
         news_url("autonomous navigation", "en-US"),
+    ],
+    "🛠️ Surveying Equipment & LiDAR (New Products & Trends)": [
+        news_url("Trimble surveying new product", "en-US"),
+        news_url("Leica Geosystems LiDAR", "en-US"),
+        news_url("CHCNAV drone mapping", "en-US"),
+        news_url("Topcon surveying", "en-US"),
+        news_url("YellowScan LiDAR", "en-US"),
+        news_url("RIEGL LiDAR", "en-US"),
+        news_url("SLAM mapping equipment", "en-US"),
     ],
 }
 
@@ -241,53 +261,75 @@ def generate_html(domestic_data, international_data, international_translated, s
 
 def fetch_stock_data():
     try:
+        # First, try Google Finance which is often more strictly real-time and doesn't get stuck on old data
+        print("Fetching real-time stock data from Google Finance...")
+        import urllib.request
+        import re
+        url = "https://www.google.com/finance/quote/278A:TYO"
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        html = urllib.request.urlopen(req, timeout=10).read().decode('utf-8')
+        price_match = re.search(r'class="YMlKec fxKbKc"[^>]*>([^<]+)', html)
+        if price_match:
+            price_str = price_match.group(1).replace('¥', '').replace('\\', '').replace(',', '').strip()
+            price = float(price_str)
+            
+            # Fetch change string
+            change_match = re.search(r'class="JwB6zf"[^>]*>([^<]+)', html)
+            change_str = change_match.group(1).strip() if change_match else "0.00%"
+            is_up = not change_str.startswith("-")
+
+            # Google Finance gives absolute change right next to percentage usually, or we just supply percentage
+            # Since change string is usually like '-0.40%' or '1.20%', we will try to parse it
+            return {
+                "price": f"{price:,.0f}",
+                "change": change_str.split('分')[0] if '分' in change_str else "リアルタイム",  # fallback text if needed
+                "change_percent": change_str,
+                "is_up": is_up
+            }
+    except Exception as e:
+        print(f"Google Finance failed: {e}. Trying yfinance fallback...")
+        
+    try:
         import yfinance as yf
         ticker = yf.Ticker("278A.T")
-        history = ticker.history(period="5d")
-        if history is not None and not history.empty and len(history) >= 1:
+        # Use 1m interval to get real-time during market hours
+        history = ticker.history(period="1mo", interval="1d") # fallback to daily if 1m is not available correctly for previous day comparison
+        if memory_fallback := _yfinance_realtime(ticker):
+             return memory_fallback
+             
+        if history is not None and not history.empty and len(history) >= 2:
             current_price = history['Close'].iloc[-1]
-            if len(history) >= 2:
-                prev_price = history['Close'].iloc[-2]
-                change = current_price - prev_price
-                change_percent = (change / prev_price) * 100
-                return {
-                    "price": f"{current_price:,.0f}",
-                    "change": f"{abs(change):,.0f}",
-                    "change_percent": f"{abs(change_percent):.2f}%",
-                    "is_up": change >= 0
-                }
-            else:
-                return {
-                    "price": f"{current_price:,.0f}",
-                    "change": "0",
-                    "change_percent": "0.00%",
-                    "is_up": True
-                }
-        else:
-            print("yfinance history empty. Trying Google Finance fallback...")
-            import urllib.request
-            import re
-            url = "https://www.google.com/finance/quote/278A:TYO"
-            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-            html = urllib.request.urlopen(req).read().decode('utf-8')
-            price_match = re.search(r'class="YMlKec fxKbKc"[^>]*>([^<]+)', html)
-            if price_match:
-                price_str = price_match.group(1).replace('¥', '').replace('\\', '').replace(',', '').strip()
-                price = float(price_str)
-                
-                # Fetch change string
-                change_match = re.search(r'class="JwB6zf"[^>]*>([^<]+)', html)
-                change_str = change_match.group(1).strip() if change_match else "0.00%"
-                is_up = not change_str.startswith("-")
-
-                return {
-                    "price": f"{price:,.0f}",
-                    "change": "-",
-                    "change_percent": change_str,
-                    "is_up": is_up
-                }
+            prev_price = history['Close'].iloc[-2]
+            change = current_price - prev_price
+            change_percent = (change / prev_price) * 100
+            return {
+                "price": f"{current_price:,.0f}",
+                "change": f"{abs(change):,.0f}",
+                "change_percent": f"{abs(change_percent):.2f}%",
+                "is_up": change >= 0
+            }
     except Exception as e:
-        print(f"Error fetching stock data: {e}")
+        print(f"yfinance failed: {e}")
+
+    return None
+
+def _yfinance_realtime(ticker):
+    try:
+        hist_1m = ticker.history(period="1d", interval="1m")
+        hist_daily = ticker.history(period="5d", interval="1d")
+        if not hist_1m.empty and len(hist_daily) >= 2:
+            current_price = hist_1m['Close'].iloc[-1]
+            prev_price = hist_daily['Close'].iloc[-2]
+            change = current_price - prev_price
+            change_percent = (change / prev_price) * 100
+            return {
+                "price": f"{current_price:,.0f}",
+                "change": f"{abs(change):,.0f}",
+                "change_percent": f"{abs(change_percent):.2f}%",
+                "is_up": change >= 0
+            }
+    except:
+        pass
     return None
 
 
