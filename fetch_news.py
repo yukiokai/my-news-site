@@ -108,15 +108,15 @@ DOMESTIC_CATEGORIES = {
         news_url("国土地理院", "ja-JP"),
     ],
     "🛠️ 測量機器・LiDAR・SLAM (新製品・メーカー動向)": [
-        news_url("Trimble 測量", "ja-JP"),
-        news_url("Leica 測量機器", "ja-JP"),
-        news_url("CHCNAV ドローン", "ja-JP"),
-        news_url("トプコン 新製品", "ja-JP"),
-        news_url("YellowScan LiDAR", "ja-JP"),
-        news_url("FLIGHTS LiDAR", "ja-JP"),
+        news_url("トリンブル 測量 または Trimble", "ja-JP"),
+        news_url("ライカ ジオシステムズ 測量", "ja-JP"),
+        news_url("CHCNAV", "ja-JP"),
+        news_url("トプコン 測量機 または トプコン 新商品", "ja-JP"),
+        news_url("イエロースキャン または YellowScan", "ja-JP"),
+        news_url("FLIGHTS SCAN", "ja-JP"),
         news_url("RIEGL LiDAR", "ja-JP"),
-        news_url("3Dスキャナー 測量機器", "ja-JP"),
-        news_url("SLAM 測量", "ja-JP"),
+        news_url("3Dスキャナー 測量 または SLAM", "ja-JP"),
+        news_url("LiDAR ドローン 新技術", "ja-JP"),
     ],
 }
 
@@ -146,13 +146,14 @@ INTERNATIONAL_CATEGORIES = {
         news_url("autonomous navigation", "en-US"),
     ],
     "🛠️ Surveying Equipment & LiDAR (New Products & Trends)": [
-        news_url("Trimble surveying new product", "en-US"),
-        news_url("Leica Geosystems LiDAR", "en-US"),
-        news_url("CHCNAV drone mapping", "en-US"),
-        news_url("Topcon surveying", "en-US"),
-        news_url("YellowScan LiDAR", "en-US"),
-        news_url("RIEGL LiDAR", "en-US"),
-        news_url("SLAM mapping equipment", "en-US"),
+        news_url("Trimble surveying OR Trimble LiDAR", "en-US"),
+        news_url("Leica Geosystems BLK OR surveying", "en-US"),
+        news_url("CHCNAV navigation", "en-US"),
+        news_url("Topcon positioning", "en-US"),
+        news_url("YellowScan UAV LiDAR", "en-US"),
+        news_url("RIEGL laser measurement", "en-US"),
+        news_url("SLAM 3D mapping drone", "en-US"),
+        news_url("surveying LiDAR new release", "en-US"),
     ],
 }
 
@@ -191,9 +192,9 @@ def fetch_category_data(categories, max_per_category=15):
                     if not title or "no image" in title.lower():
                         continue
 
-                    # 古い記事（30日以上前）を除外
+                    # 古い記事（14日以上前）を除外
                     entry_ts = get_timestamp(entry)
-                    if entry_ts > 0 and (now_ts - entry_ts > 30 * 24 * 3600):
+                    if entry_ts > 0 and (now_ts - entry_ts > 14 * 24 * 3600):
                         continue
 
                     # Deduplicate by title similarity
