@@ -57,6 +57,29 @@ def get_image_url(entry):
                     url = enc.get("href", enc.get("url", ""))
                     break
     
+    # 2. Google News対策: summaryやdescription内のimgタグを探す
+    if not url:
+        summary = entry.get("summary", getattr(entry, "description", ""))
+        img_match = re.search(r'<img[^>]+src=["\'](.*?)["\']', summary, re.IGNORECASE)
+        if img_match:
+            url = img_match.group(1)
+            
+    # 3. 究極の対策: 画像がない場合、リンク先のOGP画像(og:image)を直接スクレイピングして取得する
+    if not url and hasattr(entry, "link"):
+        try:
+            import urllib.request
+            req = urllib.request.Request(entry.link, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'})
+            # GoogleNewsのリダイレクトを辿るためのタイムアウトを長めに(3秒)
+            html = urllib.request.urlopen(req, timeout=3).read().decode('utf-8', errors='ignore')
+            
+            # meta property="og:image" content="..." または meta content="..." property="og:image" に対応
+            match = re.search(r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\'](.*?)["\']|<meta[^>]+content=["\'](.*?)["\'][^>]+property=["\']og:image["\']', html, re.IGNORECASE)
+            if match:
+                url = match.group(1) or match.group(2)
+        except Exception as e:
+            # 取得失敗時は無視して次の処理へ
+            pass
+
     # Improve Bing image quality if it's a Bing thumbnail URL
     if url and "bing.com/th?" in url:
         # Clean up existing parameters to prevent resolution limiting
