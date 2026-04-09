@@ -71,6 +71,9 @@ def news_url(query, mkt="ja-JP"):
     encoded = urllib.parse.quote(query)
     return f"https://www.bing.com/news/search?q={encoded}&format=rss&mkt={mkt}"
 
+def google_news_url(query, hl="ja", gl="JP", ceid="JP:ja"):
+    encoded = urllib.parse.quote(query)
+    return f"https://news.google.com/rss/search?q={encoded}&hl={hl}&gl={gl}&ceid={ceid}"
 
 # ─── 国内カテゴリ ────────────────────────────────────────────────
 # Bing RSSのOR検索挙動が不安定なため、個別のキーワードリストとして構成
@@ -108,23 +111,21 @@ DOMESTIC_CATEGORIES = {
         news_url("国土地理院", "ja-JP"),
     ],
     "🛠️ 測量機器・LiDAR・SLAM (新製品・メーカー動向)": [
+        google_news_url("Trimble 測量 新製品 OR トリンブル"),
+        google_news_url("ライカ ジオシステムズ"),
+        google_news_url("Leica 測量スキャナ"),
+        google_news_url("CHCNAV"),
+        google_news_url("トプコン 新製品 OR 測量"),
+        google_news_url("YellowScan"),
+        google_news_url("FLIGHTS SCAN"),
+        google_news_url("RIEGL LiDAR"),
+        google_news_url("3Dレーザースキャナー 測量機器"),
+        google_news_url("LiDAR ドローン 導入"),
+        google_news_url("SLAM 測量 新技術"),
+        google_news_url("ハンディSLAM"),
         news_url("Trimble 測量", "ja-JP"),
-        news_url("トリンブル 新技術", "ja-JP"),
         news_url("ライカ ジオシステムズ", "ja-JP"),
-        news_url("Leica 測量", "ja-JP"),
-        news_url("CHCNAV", "ja-JP"),
         news_url("トプコン 測量", "ja-JP"),
-        news_url("トプコン 新商品", "ja-JP"),
-        news_url("YellowScan", "ja-JP"),
-        news_url("イエロースキャン", "ja-JP"),
-        news_url("FLIGHTS SCAN", "ja-JP"),
-        news_url("RIEGL", "ja-JP"),
-        news_url("リーグル LiDAR", "ja-JP"),
-        news_url("3Dレーザースキャナー 測量", "ja-JP"),
-        news_url("LiDAR ドローン 新技術", "ja-JP"),
-        news_url("SLAM 測量", "ja-JP"),
-        news_url("ハンディSLAM", "ja-JP"),
-        news_url("UAVレーザー", "ja-JP"),
     ],
 }
 
@@ -154,17 +155,14 @@ INTERNATIONAL_CATEGORIES = {
         news_url("autonomous navigation", "en-US"),
     ],
     "🛠️ Surveying Equipment & LiDAR (New Products & Trends)": [
-        news_url("Trimble surveying", "en-US"),
-        news_url("Trimble LiDAR", "en-US"),
-        news_url("Leica Geosystems", "en-US"),
-        news_url("Leica BLK", "en-US"),
-        news_url("CHCNAV drone", "en-US"),
-        news_url("Topcon positioning", "en-US"),
-        news_url("YellowScan LiDAR", "en-US"),
-        news_url("RIEGL laser scanner", "en-US"),
-        news_url("SLAM 3D mapping", "en-US"),
-        news_url("Handheld SLAM", "en-US"),
-        news_url("surveying LiDAR new release", "en-US"),
+        google_news_url("Trimble surveying OR LiDAR new product", "en", "US", "US:en"),
+        google_news_url("Leica Geosystems BLK surveying", "en", "US", "US:en"),
+        google_news_url("CHCNAV mapping", "en", "US", "US:en"),
+        google_news_url("Topcon positioning new release", "en", "US", "US:en"),
+        google_news_url("YellowScan UAV LiDAR", "en", "US", "US:en"),
+        google_news_url("RIEGL laser scanner mapping", "en", "US", "US:en"),
+        google_news_url("SLAM 3D mapping equipment", "en", "US", "US:en"),
+        google_news_url("surveying Handheld SLAM", "en", "US", "US:en"),
     ],
 }
 
@@ -203,9 +201,9 @@ def fetch_category_data(categories, max_per_category=15):
                     if not title or "no image" in title.lower():
                         continue
 
-                    # 古い記事（14日以上前）を除外
+                    # 測量・LiDARなどのニッチな情報は絶対数が少ないため、期間フィルタを長め(60日)に設定して古い有益情報を取りこぼさない
                     entry_ts = get_timestamp(entry)
-                    if entry_ts > 0 and (now_ts - entry_ts > 14 * 24 * 3600):
+                    if entry_ts > 0 and (now_ts - entry_ts > 60 * 24 * 3600):
                         continue
 
                     # Deduplicate by title similarity
@@ -350,11 +348,11 @@ if __name__ == "__main__":
     stock_data = fetch_stock_data()
 
     print("Fetching domestic news...")
-    domestic = fetch_category_data(DOMESTIC_CATEGORIES, max_per_category=10)
+    domestic = fetch_category_data(DOMESTIC_CATEGORIES, max_per_category=20)
 
     print("Fetching international news...")
     # 海外ニュースの取得量を増加
-    international = fetch_category_data(INTERNATIONAL_CATEGORIES, max_per_category=15)
+    international = fetch_category_data(INTERNATIONAL_CATEGORIES, max_per_category=25)
     
     print("Translating international news...")
     international_translated = {}
